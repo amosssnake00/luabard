@@ -77,7 +77,7 @@ local mq = require('mq')
 require 'ImGui'
 
 local MODES = {'manual','assist','chase'}
-local SPELLSETS = {melee=1,caster=1,meleedot=1,quickburn=1}
+local SPELLSETS = {melee=1,caster=1,meleedot=1,quickburn=1,tank=1}
 local ASSISTS = {group=1,raid1=1,raid2=1,raid3=1}
 local EPIC_OPTS = {always=1,shm=1,burn=1,never=1}
 local OPTS = {
@@ -103,6 +103,7 @@ local OPTS = {
     BYOS=false,
     SAFEMANA=20,
     COMBATMEM=false,
+    AOEBUFFS=false,
 }
 local DEBUG=false
 local PAUSED=true -- controls the main combat loop
@@ -116,11 +117,11 @@ local SPELLSET_LOADED = nil
 local I_AM_DEAD = false
 
 local LOG_PREFIX = '\a-t[\ax\ayBardBot\ax\a-t]\ax '
-local function info(text, ...)
-    printf(LOG_PREFIX..text, ...)
+local function info(...)
+    printf(LOG_PREFIX..string.format(...))
 end
-local function debug(text, ...)
-    if DEBUG then printf(LOG_PREFIX..text, ...) end
+local function debug(...)
+    if DEBUG then printf(...) end
 end
 
 local function get_spellid_and_rank(spell_name)
@@ -135,31 +136,51 @@ end
 -- mana regen!!
 
 local spells = {
-    ['aura']=get_spellid_and_rank('Aura of Pli Xin Liako'), -- spell dmg, overhaste, flurry, triple atk
+    ['aura']=get_spellid_and_rank('Aura of Tenisbre'), -- spell dmg, overhaste, flurry, triple atk
     ['composite']=get_spellid_and_rank('Ecliptic Psalm'), -- DD+melee dmg bonus + small heal
-    ['aria']=get_spellid_and_rank('Aria of Pli Xin Liako'), -- spell dmg, overhaste, flurry, triple atk
-    ['warmarch']=get_spellid_and_rank('War March of Centien Xi Va Xakra'), -- haste, atk, ds
-    ['warchorus']=get_spellid_and_rank('War Chorus of the Bloodbeast'), -- haste, atk, ds AOE
-    ['arcane']=get_spellid_and_rank('Arcane Harmony'), -- spell dmg proc
-    ['suffering']=get_spellid_and_rank('Shojralen\'s Song of Suffering'), -- melee dmg proc
-    ['spiteful']=get_spellid_and_rank('Von Deek\'s Spiteful Lyric'), -- AC
-    ['manaregen']=get_spellid_and_rank('Chorus of Shei Vinitras'), -- HP/MANA/END AoE
-    ['pulse']=get_spellid_and_rank('Pulse of Nikolas'), -- heal focus + regen
-    ['sonata']=get_spellid_and_rank('Xetheg\'s Spry Sonata'), -- spell shield, AC, dmg mitigation
+    ['aria']=get_spellid_and_rank('Aria of Tenisbre'), -- spell dmg, overhaste, flurry, triple atk
+    ['warmarch']=get_spellid_and_rank('War March of Nokk'), -- haste, atk, ds
+    ['arcane']=get_spellid_and_rank('Arcane Rhythm'), -- spell dmg proc
+    ['suffering']=get_spellid_and_rank('Kanghammer\'s Song of Suffering'), -- melee dmg proc
+    ['spiteful']=get_spellid_and_rank('Tatalros\' Spiteful Lyric'), -- AC
+    ['pulse']=get_spellid_and_rank('Pulse of August'), -- heal focus + regen
+    ['sonata']=get_spellid_and_rank('Dhakka\'s Spry Sonata'), -- spell shield, AC, dmg mitigation
     ['dirge']=get_spellid_and_rank('Dirge of the Onokiwan'), -- spell+melee dmg mitigation
-    ['firenukebuff']=get_spellid_and_rank('Constance\'s Aria'), -- inc fire DD
-    ['firemagicdotbuff']=get_spellid_and_rank('Fyrthek Fior\'s Psalm of Potency'), -- inc fire+mag dot
-    ['crescendo']=get_spellid_and_rank('Zelinstein\'s Lively Crescendo'), -- small heal hp, mana, end
+    ['firenukebuff']=get_spellid_and_rank('Flariton\'s Aria'), -- inc fire DD
+    ['firemagicdotbuff']=get_spellid_and_rank('Tatalros\' Psalm of Potency'), -- inc fire+mag dot
+    ['crescendo']=get_spellid_and_rank('Regar\'s Lively Crescendo'), -- small heal hp, mana, end
     ['insult']=get_spellid_and_rank('Nord\'s Disdain'), -- synergy DD
     ['insult2']=get_spellid_and_rank('Yelinak\'s Insult'), -- synergy DD2
-    ['chantflame']=get_spellid_and_rank('Shak Dathor\'s Chant of Flame'),
-    ['chantfrost']=get_spellid_and_rank('Sylra Fris\' Chant of Frost'),
-    ['chantdisease']=get_spellid_and_rank('Coagulus\' Chant of Disease'),
-    ['chantpoison']=get_spellid_and_rank('Cruor\'s Chant of Poison'),
+    ['chantflame']=get_spellid_and_rank('Kindleheart\'s Chant of Flame'),
+    ['chantfrost']=get_spellid_and_rank('Swarn\' Chant of Frost'),
+    ['chantdisease']=get_spellid_and_rank('Goremand\' Chant of Disease'),
+    ['chantpoison']=get_spellid_and_rank('Marsin\'s Chant of Poison'),
     ['alliance']=get_spellid_and_rank('Conjunction of Sticks and Stones'),
-    ['mezst']=get_spellid_and_rank('Slumber of the Diabo'),
-    ['mezae']=get_spellid_and_rank('Wave of Nocturn'),
+    ['mezst']=get_spellid_and_rank('Slumber of Suja'),
+    ['mezae']=get_spellid_and_rank('Wave of Stupor'),
+    ['psalm']=get_spellid_and_rank('Psalm of the Nomad'), -- DS and AC and MR
+    ['warmarch_group']=get_spellid_and_rank('War March of Nokk'), -- haste, atk, ds
+    ['pulse_group']=get_spellid_and_rank('Pulse of August'), -- heal focus + regen
+    ['warchorus_aoe']=get_spellid_and_rank('War Chorus of the Bloodbeast'), -- haste, atk, ds AOE
+    ['manaregen_aoe']=get_spellid_and_rank('Chorus of Shalowain'), -- mana AOE
 }
+
+--fix for wonky auraname
+
+if spells['aura']['name'] == 'Aura of Tenisbre' then
+    spells['aura']['altname']=('Aura of Tenisbre Effect I')
+end
+
+if spells['aura']['name'] == 'Aura of Tenisbre Rk. II' then
+    spells['aura']['altname']=('Aura of Tenisbre Effect II')
+end
+
+if spells['aura']['name'] == 'Aura of Tenisbre Rk. III' then
+    spells['aura']['altname']=('Aura of Tenisbre Effect III')
+end
+
+
+
 for _,spell in pairs(spells) do
     info('%s (%s)', spell['name'], spell['id'])
 end
@@ -182,7 +203,6 @@ local caster = {}
 table.insert(caster, spells['composite'])
 table.insert(caster, spells['crescendo'])
 table.insert(caster, spells['aria'])
-
 table.insert(caster, spells['firenukebuff'])
 table.insert(caster, spells['suffering'])
 table.insert(caster, spells['warmarch'])
@@ -211,16 +231,33 @@ table.insert(meleedot, spells['chantfrost'])
 local quickburn = {}
 table.insert(quickburn, spells['aria'])
 table.insert(quickburn, spells['warmarch'])
+--table.insert(quickburn, spells['warchorus'])
 table.insert(quickburn, spells['suffering'])
-table.insert(quickburn, spells['manaregen'])
+table.insert(quickburn, spells['pulse'])
+--table.insert(quickburn, spells['manaregen'])
 table.insert(quickburn, spells['chantfrost'])
 table.insert(quickburn, spells['chantflame'])
 table.insert(quickburn, spells['chantdisease'])
 table.insert(quickburn, spells['composite'])
 table.insert(quickburn, spells['chantpoison'])
-
 -- synergy
 -- synergy2
+-- mezst
+-- mezae
+
+local tank = {}
+table.insert(tank, spells['dirge'])
+table.insert(tank, spells['composite'])
+table.insert(tank, spells['spiteful'])
+table.insert(tank, spells['psalm'])
+table.insert(tank, spells['crescendo'])
+table.insert(tank, spells['aria'])
+table.insert(tank, spells['sonata'])
+table.insert(tank, spells['warmarch'])
+table.insert(tank, spells['pulse'])
+table.insert(tank, spells['suffering'])
+
+-- synergy
 -- mezst
 -- mezae
 
@@ -229,6 +266,7 @@ local songs = {
     ['caster']=caster,
     ['meleedot']=meleedot,
     ['quickburn']=quickburn,
+    ['tank']=tank,
 }
 
 -- entries in the items table are MQ item datatypes
@@ -471,6 +509,7 @@ local function load_settings()
     if settings['BYOS'] ~= nil then OPTS.BYOS = settings['BYOS'] end
     if settings['SAFEMANA'] ~= nil then OPTS.SAFEMANA = settings['SAFEMANA'] end
     if settings['COMBATMEM'] ~= nil then OPTS.COMBATMEM = settings['COMBATMEM'] end
+    if settings['AOEBUFFS'] ~= nil then OPTS.AOEBUFFS = settings['AOEBUFFS'] end
 end
 
 local function save_settings()
@@ -538,7 +577,7 @@ local function check_chase()
     local chase_y = chase_spawn.Y()
     if not chase_x or not chase_y then return end
     if check_distance(me_x, me_y, chase_x, chase_y) > OPTS.CHASEDISTANCE then
-        if not mq.TLO.Nav.Active() then
+        if not mq.TLO.Navigation.Active() then
             mq.cmdf('/nav spawn pc =%s | log=off', OPTS.CHASETARGET)
         end
     end
@@ -554,7 +593,7 @@ local function check_camp()
         return
     end
     if check_distance(mq.TLO.Me.X(), mq.TLO.Me.Y(), CAMP.X, CAMP.Y) > 15 then
-        if not mq.TLO.Nav.Active() then
+        if not mq.TLO.Navigation.Active() then
             mq.cmdf('/nav locyxz %d %d %d log=off', CAMP.Y, CAMP.X, CAMP.Z)
         end
     end
@@ -714,6 +753,7 @@ local function get_combat_position()
 end
 
 local function attack()
+    --do return end --quick fix
     if ASSIST_TARGET_ID == 0 or mq.TLO.Target.ID() ~= ASSIST_TARGET_ID or not should_assist() then
         mq.cmd('/attack off')
         return
@@ -728,6 +768,7 @@ local function attack()
     end
     if not mq.TLO.Me.Combat() then
         mq.cmd('/attack on')
+        mq.cmd('/face fast')
     end
 end
 
@@ -1173,7 +1214,7 @@ local function check_buffs()
     if am_i_dead() then return end
     if is_fighting() then return end
     if mq.TLO.SpawnCount(string.format('xtarhater radius %d zradius 50', OPTS.CAMPRADIUS))() > 0 then return end
-    if not mq.TLO.Me.Aura(spells['aura']['name'])() then
+    if not (mq.TLO.Me.Aura(spells['aura']['name'])() or mq.TLO.Me.Aura(spells['aura']['altname'])()) then
         local restore_gem = nil
         if not mq.TLO.Me.Gem(spells['aura']['name'])() then
             restore_gem = mq.TLO.Me.Gem(1)()
@@ -1214,6 +1255,13 @@ end
 local check_spell_timer = 0
 local function check_spell_set()
     if (is_fighting() or not OPTS.COMBATMEM) or mq.TLO.Me.Moving() or am_i_dead() or OPTS.BYOS then return end
+    if OPTS.AOEBUFFS then
+        spells['warmarch'] = spells['warchorus_aoe']
+        spells['pulse'] = spells['manaregen_aoe']
+    else
+        spells['warmarch'] = spells['warmarch_group']
+        spells['pulse'] = spells['pulse_group']
+    end
     if SPELLSET_LOADED ~= OPTS.SPELLSET or timer_expired(check_spell_timer, 30) then
         if OPTS.SPELLSET == 'melee' then
             if mq.TLO.Me.Gem(1)() ~= spells['aria']['name'] then swap_spell(spells['aria']['name'], 1) end
@@ -1273,7 +1321,23 @@ local function check_spell_set()
             if mq.TLO.Me.Gem(10)() ~= spells['chantpoison']['name'] then swap_spell(spells['chantpoison']['name'], 10) end
             if mq.TLO.Me.Gem(11)() ~= spells['insult2']['name'] then swap_spell(spells['insult2']['name'], 11) end
             if mq.TLO.Me.Gem(12)() ~= 'Composite Psalm' then swap_spell(spells['composite']['name'], 12) end
-            if mq.TLO.Me.Gem(13)() ~= spells['manaregen']['name'] then swap_spell(spells['manaregen']['name'], 13) end
+            if mq.TLO.Me.Gem(13)() ~= spells['pulse']['name'] then swap_spell(spells['pulse']['name'], 13) end
+            SPELLSET_LOADED = OPTS.SPELLSET
+        elseif OPTS.SPELLSET == 'tank' then
+
+            if mq.TLO.Me.Gem(1)() ~= spells['aria']['name'] then swap_spell(spells['aria']['name'], 1) end
+            if mq.TLO.Me.Gem(2)() ~= spells['psalm']['name'] then swap_spell(spells['psalm']['name'], 2) end
+            if mq.TLO.Me.Gem(3)() ~= spells['spiteful']['name'] then swap_spell(spells['spiteful']['name'], 3) end
+            if mq.TLO.Me.Gem(4)() ~= spells['suffering']['name'] then swap_spell(spells['suffering']['name'], 4) end
+            if mq.TLO.Me.Gem(5)() ~= spells['insult']['name'] then swap_spell(spells['insult']['name'], 5) end
+            if mq.TLO.Me.Gem(6)() ~= spells['warmarch']['name'] then swap_spell(spells['warmarch']['name'], 6) end
+            if mq.TLO.Me.Gem(7)() ~= spells['sonata']['name'] then swap_spell(spells['sonata']['name'], 7) end
+            if mq.TLO.Me.Gem(8)() ~= spells['mezst']['name'] then swap_spell(spells['mezst']['name'], 8) end
+            if mq.TLO.Me.Gem(9)() ~= spells['mezae']['name'] then swap_spell(spells['mezae']['name'], 9) end
+            if mq.TLO.Me.Gem(10)() ~= spells['crescendo']['name'] then swap_spell(spells['crescendo']['name'], 10) end
+            if mq.TLO.Me.Gem(11)() ~= spells['pulse']['name'] then swap_spell(spells['pulse']['name'], 11) end
+            if mq.TLO.Me.Gem(12)() ~= 'Composite Psalm' then swap_spell(spells['composite']['name'], 12) end
+            if mq.TLO.Me.Gem(13)() ~= spells['dirge']['name'] then swap_spell(spells['dirge']['name'], 13) end
             SPELLSET_LOADED = OPTS.SPELLSET
         end
         check_spell_timer = current_time()
@@ -1407,6 +1471,7 @@ local function draw_right_pane_window()
         OPTS.MEZAE = draw_check_box('Mez AE', '##mezae', OPTS.MEZAE, 'Mez AOE')
         OPTS.BYOS = draw_check_box('BYOS', '##byos', OPTS.BYOS, 'Bring your own spells')
         OPTS.COMBATMEM = draw_check_box('Combat mem spells', '##combatmem', OPTS.COMBATMEM, 'Shuffle memmed spells while fighting')
+        OPTS.AOEBUFFS = draw_check_box('AOE buff songs', '##aoebuffs', OPTS.AOEBUFFS, 'Mem AoE versions of buff songs')
     end
     ImGui.EndChild()
 end
