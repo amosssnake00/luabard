@@ -3,7 +3,7 @@
 A Bard bot using Lua.
 
 ## Overview
-This script automates a level 120 Bard in a group setting. It expects to find all spells and AAs and such that it needs to run.
+This script automates a level 125 Bard in a group setting. It expects to find all spells and AAs and such that it needs to run.
 
 ## Visuals
 Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
