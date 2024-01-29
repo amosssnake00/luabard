@@ -132,6 +132,12 @@ local function get_aaid_and_name(aa_name)
     return {['id']=mq.TLO.Me.AltAbility(aa_name).ID(), ['name']=aa_name}
 end
 
+local buffs = {
+    {name="Symphony of Battle", item="Songblade of the Eternal"},
+    {name="Familiar: Striped Badger", item="Striped Badger Whistle"},
+}
+
+
 -- All spells ID + Rank name
 -- mana regen!!
 
@@ -1227,8 +1233,10 @@ local function check_buffs()
         end
     end
     -- add Songblade
-    if not mq.TLO.Me.Buff('Symphony of Battle')() then 
-        use_item(mq.TLO.FindItem('=Songblade of the Eternal'))
+    for i = 1,#buffs do
+        if not mq.TLO.Me.Buff(buffs[i]['name'])() then
+            use_item(mq.TLO.FindItem('='..buffs[i]['item']))
+        end
     end
 end
 
