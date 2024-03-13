@@ -109,8 +109,8 @@ local DEBUG=false
 local PAUSED=true -- controls the main combat loop
 local BURN_NOW = false -- toggled by /burnnow binding to burn immediately
 local CAMP = nil
-local MIN_MANA = 15
-local MIN_END = 15
+local MIN_MANA = 5
+local MIN_END = 5
 local AE_MEZ_COUNT = 3
 
 local SPELLSET_LOADED = nil
@@ -158,8 +158,8 @@ local spells = {
     ['insult']=get_spellid_and_rank('Nord\'s Disdain'), -- synergy DD
     ['insult2']=get_spellid_and_rank('Yelinak\'s Insult'), -- synergy DD2
     ['chantflame']=get_spellid_and_rank('Kindleheart\'s Chant of Flame'),
-    ['chantfrost']=get_spellid_and_rank('Swarn\' Chant of Frost'),
-    ['chantdisease']=get_spellid_and_rank('Goremand\' Chant of Disease'),
+    ['chantfrost']=get_spellid_and_rank('Swarn\'s Chant of Frost'),
+    ['chantdisease']=get_spellid_and_rank('Goremand\'s Chant of Disease'),
     ['chantpoison']=get_spellid_and_rank('Marsin\'s Chant of Poison'),
     ['alliance']=get_spellid_and_rank('Conjunction of Sticks and Stones'),
     ['mezst']=get_spellid_and_rank('Slumber of Suja'),
@@ -174,21 +174,32 @@ local spells = {
 --fix for wonky auraname
 
 if spells['aura']['name'] == 'Aura of Tenisbre' then
-    spells['aura']['altname']=('Aura of Tenisbre Effect I')
+    spells['aura']['altname']=('Aura of Tenisbre Effect 1')
 end
 
 if spells['aura']['name'] == 'Aura of Tenisbre Rk. II' then
-    spells['aura']['altname']=('Aura of Tenisbre Effect II')
+    spells['aura']['altname']=('Aura of Tenisbre Effect 2')
 end
 
 if spells['aura']['name'] == 'Aura of Tenisbre Rk. III' then
-    spells['aura']['altname']=('Aura of Tenisbre Effect III')
+    spells['aura']['altname']=('Aura of Tenisbre Effect 3')
 end
 
 
 
 for _,spell in pairs(spells) do
-    info('%s (%s)', spell['name'], spell['id'])
+    if spell['name'] == nil or spell['id'] == nil then
+        info('ATTENTION: spell names have changed! Notify AMS or fix yourself')
+        mq.cmd('/beep')
+        mq.delay(500)
+        mq.cmd('/beep')
+        mq.delay(500)
+        mq.cmd('/beep')
+        mq.delay(500)
+        os.exit()
+    else
+        info('%s (%s)', spell['name'], spell['id'])
+    end
 end
 
 -- entries in the dots table are pairs of {spell id, spell name} in priority order
