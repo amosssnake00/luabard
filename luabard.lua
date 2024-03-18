@@ -182,7 +182,7 @@ if spells['aura']['name'] == 'Aura of Tenisbre Rk. II' then
 end
 
 if spells['aura']['name'] == 'Aura of Tenisbre Rk. III' then
-    spells['aura']['altname']=('Aura of Tenisbre Effect 3')
+    spells['aura']['altname']=('Aura of Tenisbre Effect 1') --well done, DBG!
 end
 
 
