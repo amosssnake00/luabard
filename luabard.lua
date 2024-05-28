@@ -68,12 +68,11 @@
 
     Settings are stored in config/bardbot_server_charactername.lua
 
---]]
+]]
 
 
----@type Mq
+
 local mq = require('mq')
---- @type ImGui
 require 'ImGui'
 
 local MODES = {'manual','assist','chase'}
